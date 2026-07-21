@@ -1,0 +1,384 @@
+--[[ MM2 PRO v2.2 ]] return(function()
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+    
+    -- ===== GUI =====
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Parent = player.PlayerGui
+    
+    local mainBtn = Instance.new("ImageButton")
+    mainBtn.Size = UDim2.new(0, 55, 0, 55)
+    mainBtn.Position = UDim2.new(0, 15, 0, 100)
+    mainBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    mainBtn.BackgroundTransparency = 0.2
+    mainBtn.BorderSizePixel = 0
+    mainBtn.Parent = screenGui
+    mainBtn.Image = "rbxassetid://6031093079"
+    mainBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    
+    local cornerMain = Instance.new("UICorner")
+    cornerMain.CornerRadius = UDim.new(1, 0)
+    cornerMain.Parent = mainBtn
+    
+    -- Меню
+    local menu = Instance.new("Frame")
+    menu.Size = UDim2.new(0, 280, 0, 460)
+    menu.Position = UDim2.new(0.5, -140, 0.5, -230)
+    menu.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    menu.BackgroundTransparency = 0.05
+    menu.BorderSizePixel = 0
+    menu.Visible = false
+    menu.Parent = screenGui
+    menu.ClipsDescendants = true
+    
+    local cornerMenu = Instance.new("UICorner")
+    cornerMenu.CornerRadius = UDim.new(0, 12)
+    cornerMenu.Parent = menu
+    
+    -- Заголовок
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 35)
+    titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = menu
+    
+    local titleText = Instance.new("TextLabel")
+    titleText.Size = UDim2.new(0.7, 0, 1, 0)
+    titleText.Position = UDim2.new(0.05, 0, 0, 0)
+    titleText.BackgroundTransparency = 1
+    titleText.Text = "🔺 MM2 PRO"
+    titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleText.Font = Enum.Font.SourceSansBold
+    titleText.TextSize = 18
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Parent = titleBar
+    
+    -- Закрыть
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeBtn.Position = UDim2.new(0.93, 0, 0.1, 0)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    closeBtn.Text = "✕"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.Font = Enum.Font.SourceSansBold
+    closeBtn.TextSize = 16
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Parent = titleBar
+    
+    local cornerClose = Instance.new("UICorner")
+    cornerClose.CornerRadius = UDim.new(0, 6)
+    cornerClose.Parent = closeBtn
+    
+    -- ===== КНОПКИ =====
+    local function createButton(text, yPos, callback, color)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.9, 0, 0, 36)
+        btn.Position = UDim2.new(0.05, 0, 0, yPos)
+        btn.BackgroundColor3 = color or Color3.fromRGB(50, 50, 70)
+        btn.Text = text
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 14
+        btn.BorderSizePixel = 0
+        btn.Parent = menu
+        
+        local cornerBtn = Instance.new("UICorner")
+        cornerBtn.CornerRadius = UDim.new(0, 8)
+        cornerBtn.Parent = btn
+        
+        btn.MouseEnter:Connect(function()
+            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 100)
+        end)
+        btn.MouseLeave:Connect(function()
+            btn.BackgroundColor3 = color or Color3.fromRGB(50, 50, 70)
+        end)
+        btn.MouseButton1Click:Connect(callback)
+        return btn
+    end
+    
+    local function createTextBox(placeholder, yPos, callback)
+        local box = Instance.new("TextBox")
+        box.Size = UDim2.new(0.9, 0, 0, 30)
+        box.Position = UDim2.new(0.05, 0, 0, yPos)
+        box.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        box.Text = placeholder
+        box.TextColor3 = Color3.fromRGB(255, 255, 255)
+        box.Font = Enum.Font.SourceSans
+        box.TextSize = 14
+        box.BorderSizePixel = 0
+        box.Parent = menu
+        
+        local cornerBox = Instance.new("UICorner")
+        cornerBox.CornerRadius = UDim.new(0, 6)
+        cornerBox.Parent = box
+        
+        box.FocusLost:Connect(function()
+            callback(box)
+        end)
+        return box
+    end
+    
+    -- ===== ПЕРЕМЕННЫЕ =====
+    local flyEnabled = false
+    local noclipEnabled = false
+    local invisibleEnabled = false
+    local espEnabled = false
+    local flyBody = nil
+    local flyGyro = nil
+    local noclipConnection = nil
+    local espLines = {}
+    local murderer = nil
+    local shootConnection = nil
+    
+    -- ===== FLY =====
+    local flyBtn = createButton("🕊️ Fly: OFF", 15, function()
+        flyEnabled = not flyEnabled
+        if flyEnabled then
+            flyBody = Instance.new("BodyPosition")
+            flyBody.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+            flyBody.P = 20000
+            flyBody.D = 1000
+            flyBody.Position = rootPart.Position
+            flyBody.Parent = rootPart
+            
+            flyGyro = Instance.new("BodyGyro")
+            flyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+            flyGyro.P = 20000
+            flyGyro.D = 1000
+            flyGyro.CFrame = rootPart.CFrame
+            flyGyro.Parent = rootPart
+            
+            flyBtn.Text = "🕊️ Fly: ON"
+            flyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        else
+            if flyBody then flyBody:Destroy() flyBody = nil end
+            if flyGyro then flyGyro:Destroy() flyGyro = nil end
+            flyBtn.Text = "🕊️ Fly: OFF"
+            flyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        end
+    end)
+    
+    game:GetService("RunService").Heartbeat:Connect(function()
+        if flyEnabled and rootPart and flyBody then
+            local moveVector = Vector3.new(0, 0, 0)
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
+                moveVector = moveVector + rootPart.CFrame.LookVector
+            end
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then
+                moveVector = moveVector - rootPart.CFrame.LookVector
+            end
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then
+                moveVector = moveVector - rootPart.CFrame.RightVector
+            end
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then
+                moveVector = moveVector + rootPart.CFrame.RightVector
+            end
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
+                moveVector = moveVector + Vector3.new(0, 1, 0)
+            end
+            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) then
+                moveVector = moveVector - Vector3.new(0, 1, 0)
+            end
+            if moveVector.Magnitude > 0 then
+                moveVector = moveVector.Unit * 50
+            end
+            flyBody.Position = rootPart.Position + moveVector
+            flyGyro.CFrame = rootPart.CFrame
+        end
+    end)
+    
+    -- ===== NOCLIP =====
+    local noclipBtn = createButton("🚪 Noclip: OFF", 55, function()
+        noclipEnabled = not noclipEnabled
+        if noclipEnabled then
+            noclipConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                if noclipEnabled and char then
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+            noclipBtn.Text = "🚪 Noclip: ON"
+            noclipBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        else
+            if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+            noclipBtn.Text = "🚪 Noclip: OFF"
+            noclipBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        end
+    end)
+    
+    -- ===== INVISIBLE =====
+    local invisBtn = createButton("👻 Invisible: OFF", 95, function()
+        invisibleEnabled = not invisibleEnabled
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = invisibleEnabled and 1 or 0
+            end
+        end
+        invisBtn.Text = invisibleEnabled and "👻 Invisible: ON" or "👻 Invisible: OFF"
+        invisBtn.BackgroundColor3 = invisibleEnabled and Color3.fromRGB(200, 0, 200) or Color3.fromRGB(50, 50, 70)
+    end)
+    
+    -- ===== WALKSPEED =====
+    local wsBox = createTextBox("WalkSpeed: 16", 135, function(box)
+        local speed = tonumber(box.Text)
+        if speed and speed > 0 and speed <= 100 then
+            hum.WalkSpeed = speed
+            box.Text = "WalkSpeed: " .. speed
+        else
+            box.Text = "WalkSpeed: " .. hum.WalkSpeed
+        end
+    end)
+    
+    -- ===== TELEPORT (вперёд) =====
+    local teleportBtn = createButton("📍 Teleport", 175, function()
+        if rootPart then
+            rootPart.CFrame = rootPart.CFrame + rootPart.CFrame.LookVector * 30
+        end
+    end, Color3.fromRGB(0, 180, 180))
+    
+    -- ===== TELEPORT TO MURDERER =====
+    local teleportMurdererBtn = createButton("👤 Teleport to Murderer", 215, function()
+        if not murderer or not murderer.Character then return end
+        local targetRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot then
+            local distance = 15 -- не вплотную
+            local direction = (targetRoot.Position - rootPart.Position).Unit
+            local newPos = targetRoot.Position - direction * distance
+            rootPart.CFrame = CFrame.new(newPos)
+        end
+    end, Color3.fromRGB(200, 150, 0))
+    
+    -- ===== ESP =====
+    local espBtn = createButton("👁️ ESP: OFF", 255, function()
+        espEnabled = not espEnabled
+        if espEnabled then
+            updateESP()
+            espBtn.Text = "👁️ ESP: ON"
+            espBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        else
+            clearESP()
+            espBtn.Text = "👁️ ESP: OFF"
+            espBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        end
+    end)
+    
+    local function updateESP()
+        clearESP()
+        murderer = nil
+        for _, plr in pairs(game.Players:GetPlayers()) do
+            if plr ~= player then
+                local plrChar = plr.Character
+                if plrChar then
+                    local color = Color3.fromRGB(0, 255, 0)
+                    if plrChar:FindFirstChild("Knife") or plrChar:FindFirstChild("Murderer") then
+                        color = Color3.fromRGB(255, 0, 0)
+                        murderer = plr
+                    end
+                    if plrChar:FindFirstChild("Gun") or plrChar:FindFirstChild("Sheriff") then
+                        color = Color3.fromRGB(0, 0, 255)
+                    end
+                    
+                    local esp = Instance.new("BoxHandleAdornment")
+                    esp.Size = Vector3.new(4, 5, 2)
+                    esp.Color3 = color
+                    esp.Transparency = 0.3
+                    esp.AlwaysOnTop = true
+                    esp.ZIndex = 10
+                    esp.Adornee = plrChar:FindFirstChild("HumanoidRootPart")
+                    esp.Parent = screenGui
+                    table.insert(espLines, esp)
+                end
+            end
+        end
+    end
+    
+    local function clearESP()
+        for _, esp in pairs(espLines) do
+            esp:Destroy()
+        end
+        espLines = {}
+    end
+    
+    game.Players.PlayerAdded:Connect(function()
+        if espEnabled then updateESP() end
+    end)
+    
+    -- ===== AIMBOT =====
+    local shootBtn = Instance.new("TextButton")
+    shootBtn.Size = UDim2.new(0, 70, 0, 70)
+    shootBtn.Position = UDim2.new(0.5, -35, 0.7, 0)
+    shootBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    shootBtn.Text = "🔫"
+    shootBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    shootBtn.Font = Enum.Font.SourceSansBold
+    shootBtn.TextSize = 30
+    shootBtn.BorderSizePixel = 0
+    shootBtn.Visible = false
+    shootBtn.Parent = screenGui
+    
+    local cornerShoot = Instance.new("UICorner")
+    cornerShoot.CornerRadius = UDim.new(1, 0)
+    cornerShoot.Parent = shootBtn
+    
+    game:GetService("RunService").Heartbeat:Connect(function()
+        if espEnabled and murderer and murderer.Character then
+            local targetRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+            if targetRoot then
+                local direction = (targetRoot.Position - rootPart.Position).Unit
+                local ray = Ray.new(rootPart.Position, direction * 100)
+                local hit, hitPos = workspace:FindPartOnRayWithIgnoreList(ray, {char})
+                if hit and hit.Parent and hit.Parent:FindFirstChild("Humanoid") then
+                    shootBtn.Visible = true
+                    if shootConnection then shootConnection:Disconnect() shootConnection = nil end
+                    shootConnection = shootBtn.MouseButton1Click:Connect(function()
+                        local vim = game:GetService("VirtualInputManager")
+                        local screenPos, onScreen = workspace.CurrentCamera:WorldToScreenPoint(targetRoot.Position)
+                        if onScreen then
+                            vim:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, true, game, 1)
+                            task.wait(0.05)
+                            vim:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, false, game, 1)
+                        end
+                        shootBtn.Visible = false
+                    end)
+                else
+                    shootBtn.Visible = false
+                    if shootConnection then shootConnection:Disconnect() shootConnection = nil end
+                end
+            end
+        else
+            shootBtn.Visible = false
+            if shootConnection then shootConnection:Disconnect() shootConnection = nil end
+        end
+    end)
+    
+    -- ===== УПРАВЛЕНИЕ =====
+    mainBtn.MouseButton1Click:Connect(function()
+        menu.Visible = not menu.Visible
+    end)
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        menu.Visible = false
+    end)
+    
+    player.CharacterAdded:Connect(function(newChar)
+        char = newChar
+        hum = char:WaitForChild("Humanoid")
+        rootPart = char:WaitForChild("HumanoidRootPart")
+        if flyBody then flyBody.Parent = rootPart end
+        if flyGyro then flyGyro.Parent = rootPart end
+    end)
+    
+    print("🔺 MM2 PRO v2.2 загружен")
+end)()
