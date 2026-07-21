@@ -1,0 +1,449 @@
+--[[ MM2 PRO (MOBILE) v2.0 ]] return(function()
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+    
+    -- ===== GUI =====
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Parent = player.PlayerGui
+    
+    -- ===== ОСНОВНАЯ КНОПКА (синий кружок) =====
+    local mainBtn = Instance.new("ImageButton")
+    mainBtn.Size = UDim2.new(0, 60, 0, 60)
+    mainBtn.Position = UDim2.new(0, 20, 0, 100)
+    mainBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+    mainBtn.BackgroundTransparency = 0.2
+    mainBtn.BorderSizePixel = 0
+    mainBtn.Parent = screenGui
+    mainBtn.Image = "rbxassetid://6031093079" -- шестерёнка
+    mainBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    
+    local cornerMain = Instance.new("UICorner")
+    cornerMain.CornerRadius = UDim.new(1, 0)
+    cornerMain.Parent = mainBtn
+    
+    -- Перетаскивание главной кнопки
+    local dragging = false
+    local dragStart, startPos
+    mainBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainBtn.Position
+        end
+    end)
+    mainBtn.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.Touch then
+            local delta = input.Position - dragStart
+            mainBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    mainBtn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    -- ===== МЕНЮ =====
+    local menu = Instance.new("Frame")
+    menu.Size = UDim2.new(0, 300, 0, 400)
+    menu.Position = UDim2.new(0.5, -150, 0.5, -200)
+    menu.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    menu.BackgroundTransparency = 0.1
+    menu.BorderSizePixel = 0
+    menu.Visible = false
+    menu.Parent = screenGui
+    menu.ClipsDescendants = true
+    
+    local cornerMenu = Instance.new("UICorner")
+    cornerMenu.CornerRadius = UDim.new(0, 12)
+    cornerMenu.Parent = menu
+    
+    -- Заголовок
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 40)
+    titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = menu
+    
+    local titleText = Instance.new("TextLabel")
+    titleText.Size = UDim2.new(0.7, 0, 1, 0)
+    titleText.Position = UDim2.new(0.05, 0, 0, 0)
+    titleText.BackgroundTransparency = 1
+    titleText.Text = "🔺 MM2 PRO"
+    titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleText.Font = Enum.Font.SourceSansBold
+    titleText.TextSize = 18
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Parent = titleBar
+    
+    -- Кнопка закрыть
+    local closeMenuBtn = Instance.new("TextButton")
+    closeMenuBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeMenuBtn.Position = UDim2.new(0.93, 0, 0.125, 0)
+    closeMenuBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    closeMenuBtn.Text = "✕"
+    closeMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeMenuBtn.Font = Enum.Font.SourceSansBold
+    closeMenuBtn.TextSize = 16
+    closeMenuBtn.BorderSizePixel = 0
+    closeMenuBtn.Parent = titleBar
+    
+    local cornerClose = Instance.new("UICorner")
+    cornerClose.CornerRadius = UDim.new(0, 6)
+    cornerClose.Parent = closeMenuBtn
+    
+    -- Вкладки
+    local tabFrame = Instance.new("Frame")
+    tabFrame.Size = UDim2.new(0.25, 0, 1, -40)
+    tabFrame.Position = UDim2.new(0, 0, 0, 40)
+    tabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    tabFrame.BorderSizePixel = 0
+    tabFrame.Parent = menu
+    
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Size = UDim2.new(0.75, 0, 1, -40)
+    contentFrame.Position = UDim2.new(0.25, 0, 0, 40)
+    contentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    contentFrame.BorderSizePixel = 0
+    contentFrame.Parent = menu
+    
+    -- Кнопки вкладок
+    local commandsTab = Instance.new("TextButton")
+    commandsTab.Size = UDim2.new(1, 0, 0, 40)
+    commandsTab.Position = UDim2.new(0, 0, 0, 0)
+    commandsTab.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    commandsTab.Text = "Команды"
+    commandsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    commandsTab.Font = Enum.Font.SourceSansBold
+    commandsTab.TextSize = 14
+    commandsTab.BorderSizePixel = 0
+    commandsTab.Parent = tabFrame
+    
+    local designTab = Instance.new("TextButton")
+    designTab.Size = UDim2.new(1, 0, 0, 40)
+    designTab.Position = UDim2.new(0, 0, 0, 45)
+    designTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    designTab.Text = "Дизайн"
+    designTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    designTab.Font = Enum.Font.SourceSansBold
+    designTab.TextSize = 14
+    designTab.BorderSizePixel = 0
+    designTab.Parent = tabFrame
+    
+    -- Контент для вкладки "Команды"
+    local commandsContent = Instance.new("ScrollingFrame")
+    commandsContent.Size = UDim2.new(1, 0, 1, 0)
+    commandsContent.BackgroundTransparency = 1
+    commandsContent.BorderSizePixel = 0
+    commandsContent.Parent = contentFrame
+    commandsContent.CanvasSize = UDim2.new(0, 0, 0, 400)
+    commandsContent.ScrollBarThickness = 4
+    
+    -- Контент для вкладки "Дизайн"
+    local designContent = Instance.new("Frame")
+    designContent.Size = UDim2.new(1, 0, 1, 0)
+    designContent.BackgroundTransparency = 1
+    designContent.BorderSizePixel = 0
+    designContent.Visible = false
+    designContent.Parent = contentFrame
+    
+    -- ===== ФУНКЦИИ СОЗДАНИЯ КНОПОК =====
+    local function createCommandBtn(text, yPos, callback)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.9, 0, 0, 36)
+        btn.Position = UDim2.new(0.05, 0, 0, yPos)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        btn.Text = text
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 14
+        btn.BorderSizePixel = 0
+        btn.Parent = commandsContent
+        
+        local cornerBtn = Instance.new("UICorner")
+        cornerBtn.CornerRadius = UDim.new(0, 6)
+        cornerBtn.Parent = btn
+        
+        btn.MouseButton1Click:Connect(callback)
+        return btn
+    end
+    
+    -- ===== ПЕРЕМЕННЫЕ =====
+    local flyEnabled = false
+    local noclipEnabled = false
+    local espEnabled = false
+    local flyBody = nil
+    local flyGyro = nil
+    local espLines = {}
+    local murderer = nil
+    local shootConnection = nil
+    
+    -- ===== КОМАНДЫ =====
+    
+    -- Fly
+    local flyBtn = createCommandBtn("🕊️ Fly: OFF", 10, function()
+        flyEnabled = not flyEnabled
+        if flyEnabled then
+            flyBody = Instance.new("BodyVelocity")
+            flyBody.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+            flyBody.Velocity = Vector3.new(0, 0, 0)
+            flyBody.Parent = rootPart
+            
+            flyGyro = Instance.new("BodyGyro")
+            flyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+            flyGyro.CFrame = rootPart.CFrame
+            flyGyro.Parent = rootPart
+            
+            flyBtn.Text = "🕊️ Fly: ON"
+            flyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        else
+            if flyBody then flyBody:Destroy() flyBody = nil end
+            if flyGyro then flyGyro:Destroy() flyGyro = nil end
+            flyBtn.Text = "🕊️ Fly: OFF"
+            flyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        end
+    end)
+    
+    -- Noclip
+    local noclipBtn = createCommandBtn("🚪 Noclip: OFF", 55, function()
+        noclipEnabled = not noclipEnabled
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not noclipEnabled
+            end
+        end
+        noclipBtn.Text = noclipEnabled and "🚪 Noclip: ON" or "🚪 Noclip: OFF"
+        noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 70)
+    end)
+    
+    -- WalkSpeed
+    local wsBox = Instance.new("TextBox")
+    wsBox.Size = UDim2.new(0.9, 0, 0, 30)
+    wsBox.Position = UDim2.new(0.05, 0, 0, 100)
+    wsBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    wsBox.Text = "WalkSpeed: 16"
+    wsBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    wsBox.Font = Enum.Font.SourceSans
+    wsBox.TextSize = 14
+    wsBox.BorderSizePixel = 0
+    wsBox.Parent = commandsContent
+    
+    local cornerWs = Instance.new("UICorner")
+    cornerWs.CornerRadius = UDim.new(0, 6)
+    cornerWs.Parent = wsBox
+    
+    wsBox.FocusLost:Connect(function()
+        local speed = tonumber(wsBox.Text)
+        if speed and speed > 0 and speed <= 100 then
+            hum.WalkSpeed = speed
+            wsBox.Text = "WalkSpeed: " .. speed
+        else
+            wsBox.Text = "WalkSpeed: " .. hum.WalkSpeed
+        end
+    end)
+    
+    -- ESP
+    local espBtn = createCommandBtn("👁️ ESP: OFF", 140, function()
+        espEnabled = not espEnabled
+        espBtn.Text = espEnabled and "👁️ ESP: ON" or "👁️ ESP: OFF"
+        espBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 70)
+        
+        if espEnabled then
+            for _, esp in pairs(espLines) do esp:Destroy() end
+            espLines = {}
+            murderer = nil
+            
+            for _, plr in pairs(game.Players:GetPlayers()) do
+                if plr ~= player then
+                    local charPlr = plr.Character
+                    if charPlr then
+                        local color = Color3.fromRGB(0, 255, 0)
+                        local isMurderer = charPlr:FindFirstChild("Knife") or charPlr:FindFirstChild("Murderer")
+                        local isSheriff = charPlr:FindFirstChild("Gun") or charPlr:FindFirstChild("Sheriff")
+                        
+                        if isMurderer then
+                            color = Color3.fromRGB(255, 0, 0)
+                            murderer = plr
+                        elseif isSheriff then
+                            color = Color3.fromRGB(0, 0, 255)
+                        end
+                        
+                        local esp = Instance.new("BoxHandleAdornment")
+                        esp.Size = Vector3.new(4, 5, 2)
+                        esp.Color3 = color
+                        esp.Transparency = 0.3
+                        esp.AlwaysOnTop = true
+                        esp.ZIndex = 10
+                        esp.Adornee = charPlr:FindFirstChild("HumanoidRootPart")
+                        esp.Parent = screenGui
+                        table.insert(espLines, esp)
+                    end
+                end
+            end
+        else
+            for _, esp in pairs(espLines) do esp:Destroy() end
+            espLines = {}
+            murderer = nil
+        end
+    end)
+    
+    -- ===== AIMBOT (кнопка-выстрел) =====
+    local shootBtn = Instance.new("TextButton")
+    shootBtn.Size = UDim2.new(0, 70, 0, 70)
+    shootBtn.Position = UDim2.new(0.5, -35, 0.7, 0)
+    shootBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    shootBtn.Text = "🔫"
+    shootBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    shootBtn.Font = Enum.Font.SourceSansBold
+    shootBtn.TextSize = 30
+    shootBtn.BorderSizePixel = 0
+    shootBtn.Visible = false
+    shootBtn.Parent = screenGui
+    
+    local cornerShoot = Instance.new("UICorner")
+    cornerShoot.CornerRadius = UDim.new(1, 0)
+    cornerShoot.Parent = shootBtn
+    
+    -- Перетаскивание кнопки выстрела
+    local shootDragging = false
+    local shootDragStart, shootStartPos
+    shootBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            shootDragging = true
+            shootDragStart = input.Position
+            shootStartPos = shootBtn.Position
+        end
+    end)
+    shootBtn.InputChanged:Connect(function(input)
+        if shootDragging and input.UserInputType == Enum.UserInputType.Touch then
+            local delta = input.Position - shootDragStart
+            shootBtn.Position = UDim2.new(shootStartPos.X.Scale, shootStartPos.X.Offset + delta.X, shootStartPos.Y.Scale, shootStartPos.Y.Offset + delta.Y)
+        end
+    end)
+    shootBtn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            shootDragging = false
+        end
+    end)
+    
+    local function updateAimbot()
+        if not espEnabled or not murderer or not murderer.Character then
+            shootBtn.Visible = false
+            if shootConnection then shootConnection:Disconnect() shootConnection = nil end
+            return
+        end
+        
+        local targetRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+        if not targetRoot then
+            shootBtn.Visible = false
+            if shootConnection then shootConnection:Disconnect() shootConnection = nil end
+            return
+        end
+        
+        local ray = Ray.new(rootPart.Position, (targetRoot.Position - rootPart.Position).Unit * 100)
+        local hit = workspace:FindPartOnRay(ray, char)
+        if hit and hit.Parent and hit.Parent:FindFirstChild("Humanoid") then
+            shootBtn.Visible = true
+            if shootConnection then shootConnection:Disconnect() shootConnection = nil end
+            
+            shootConnection = shootBtn.MouseButton1Click:Connect(function()
+                local vim = game:GetService("VirtualInputManager")
+                local targetScreenPos, onScreen = workspace.CurrentCamera:WorldToScreenPoint(targetRoot.Position)
+                if onScreen then
+                    vim:SendMouseButtonEvent(targetScreenPos.X, targetScreenPos.Y, 0, true, game, 1)
+                    task.wait(0.05)
+                    vim:SendMouseButtonEvent(targetScreenPos.X, targetScreenPos.Y, 0, false, game, 1)
+                end
+                shootBtn.Visible = false
+            end)
+        else
+            shootBtn.Visible = false
+            if shootConnection then shootConnection:Disconnect() shootConnection = nil end
+        end
+    end
+    
+    game:GetService("RunService").Heartbeat:Connect(updateAimbot)
+    
+    -- ===== ВКЛАДКИ =====
+    commandsTab.MouseButton1Click:Connect(function()
+        commandsContent.Visible = true
+        designContent.Visible = false
+        commandsTab.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        designTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    end)
+    
+    designTab.MouseButton1Click:Connect(function()
+        commandsContent.Visible = false
+        designContent.Visible = true
+        commandsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        designTab.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    end)
+    
+    -- ===== ДИЗАЙН =====
+    local themes = {
+        {name = "Серый", bg = Color3.fromRGB(30, 30, 35), frame = Color3.fromRGB(50, 50, 55), btn = Color3.fromRGB(70, 70, 80)},
+        {name = "Чёрный", bg = Color3.fromRGB(10, 10, 12), frame = Color3.fromRGB(20, 20, 25), btn = Color3.fromRGB(40, 40, 45)},
+        {name = "Белый", bg = Color3.fromRGB(220, 220, 225), frame = Color3.fromRGB(240, 240, 245), btn = Color3.fromRGB(200, 200, 210)},
+        {name = "Синий", bg = Color3.fromRGB(8, 12, 28), frame = Color3.fromRGB(16, 24, 48), btn = Color3.fromRGB(30, 50, 100)}
+    }
+    
+    local function applyTheme(index)
+        local theme = themes[index]
+        menu.BackgroundColor3 = theme.bg
+        titleBar.BackgroundColor3 = theme.frame
+        tabFrame.BackgroundColor3 = theme.frame
+        contentFrame.BackgroundColor3 = theme.bg
+        commandsTab.BackgroundColor3 = theme.btn
+        designTab.BackgroundColor3 = theme.btn
+        for _, child in pairs(commandsContent:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.BackgroundColor3 = theme.btn
+            elseif child:IsA("TextBox") then
+                child.BackgroundColor3 = theme.btn
+            end
+        end
+    end
+    
+    for i, theme in ipairs(themes) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.9, 0, 0, 36)
+        btn.Position = UDim2.new(0.05, 0, 0, 10 + (i-1) * 45)
+        btn.BackgroundColor3 = theme.btn
+        btn.Text = theme.name
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 14
+        btn.BorderSizePixel = 0
+        btn.Parent = designContent
+        
+        local cornerBtn = Instance.new("UICorner")
+        cornerBtn.CornerRadius = UDim.new(0, 6)
+        cornerBtn.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            applyTheme(i)
+        end)
+    end
+    
+    -- ===== УПРАВЛЕНИЕ МЕНЮ =====
+    mainBtn.MouseButton1Click:Connect(function()
+        menu.Visible = not menu.Visible
+    end)
+    
+    closeMenuBtn.MouseButton1Click:Connect(function()
+        menu.Visible = false
+    end)
+    
+    -- ===== ОБНОВЛЕНИЕ ПЕРСОНАЖА =====
+    player.CharacterAdded:Connect(function(newChar)
+        char = newChar
+        hum = char:WaitForChild("Humanoid")
+        rootPart = char:WaitForChild("HumanoidRootPart")
+        if flyBody then flyBody.Parent = rootPart end
+        if flyGyro then flyGyro.Parent = rootPart end
+    end)
+    
+    print("🔺 MM2 PRO (MOBILE) v2.0 загружен!")
+end)()
