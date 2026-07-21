@@ -1,0 +1,259 @@
+--[[ MM2 PRO v1.0 (рабочий) ]] return(function()
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+    
+    -- ===== ТЕМЫ =====
+    local themes = {
+        gray = {
+            bg = Color3.fromRGB(30, 30, 35),
+            frame = Color3.fromRGB(50, 50, 55),
+            button = Color3.fromRGB(70, 70, 75),
+            text = Color3.fromRGB(220, 220, 220)
+        },
+        black = {
+            bg = Color3.fromRGB(10, 10, 12),
+            frame = Color3.fromRGB(20, 20, 25),
+            button = Color3.fromRGB(40, 40, 45),
+            text = Color3.fromRGB(200, 200, 200)
+        },
+        blue = {
+            bg = Color3.fromRGB(8, 12, 28),
+            frame = Color3.fromRGB(16, 24, 48),
+            button = Color3.fromRGB(30, 50, 100),
+            text = Color3.fromRGB(200, 220, 255)
+        }
+    }
+    local currentTheme = "gray"
+    
+    -- ===== GUI =====
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Parent = player.PlayerGui
+    
+    -- Кнопка
+    local toggleBtn = Instance.new("ImageButton")
+    toggleBtn.Size = UDim2.new(0, 50, 0, 50)
+    toggleBtn.Position = UDim2.new(0, 10, 0, 100)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    toggleBtn.BackgroundTransparency = 0.1
+    toggleBtn.BorderSizePixel = 0
+    toggleBtn.Parent = screenGui
+    toggleBtn.Image = "rbxassetid://6031093079"
+    toggleBtn.ImageColor3 = Color3.fromRGB(200, 200, 200)
+    
+    local cornerBtn = Instance.new("UICorner")
+    cornerBtn.CornerRadius = UDim.new(1, 0)
+    cornerBtn.Parent = toggleBtn
+    
+    -- Меню
+    local menu = Instance.new("Frame")
+    menu.Size = UDim2.new(0, 250, 0, 320)
+    menu.Position = UDim2.new(0.5, -125, 0.5, -160)
+    menu.BackgroundColor3 = themes[currentTheme].bg
+    menu.BackgroundTransparency = 0.05
+    menu.BorderSizePixel = 0
+    menu.Visible = false
+    menu.Parent = screenGui
+    menu.ClipsDescendants = true
+    
+    local cornerMenu = Instance.new("UICorner")
+    cornerMenu.CornerRadius = UDim.new(0, 8)
+    cornerMenu.Parent = menu
+    
+    -- Заголовок
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 35)
+    titleBar.BackgroundColor3 = themes[currentTheme].frame
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = menu
+    
+    local titleText = Instance.new("TextLabel")
+    titleText.Size = UDim2.new(0.7, 0, 1, 0)
+    titleText.Position = UDim2.new(0.05, 0, 0, 0)
+    titleText.BackgroundTransparency = 1
+    titleText.Text = "🔺 MM2 PRO"
+    titleText.TextColor3 = themes[currentTheme].text
+    titleText.Font = Enum.Font.SourceSansBold
+    titleText.TextSize = 16
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Parent = titleBar
+    
+    -- Крестик
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 25, 0, 25)
+    closeBtn.Position = UDim2.new(0.93, 0, 0.15, 0)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    closeBtn.Text = "✕"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.Font = Enum.Font.SourceSansBold
+    closeBtn.TextSize = 14
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Parent = titleBar
+    
+    local cornerClose = Instance.new("UICorner")
+    cornerClose.CornerRadius = UDim.new(0, 4)
+    cornerClose.Parent = closeBtn
+    
+    -- ===== КНОПКИ =====
+    local function createButton(text, yPos, callback, color)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.9, 0, 0, 30)
+        btn.Position = UDim2.new(0.05, 0, 0, yPos)
+        btn.BackgroundColor3 = color or themes[currentTheme].button
+        btn.Text = text
+        btn.TextColor3 = themes[currentTheme].text
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 14
+        btn.BorderSizePixel = 0
+        btn.Parent = menu
+        
+        local cornerBtn = Instance.new("UICorner")
+        cornerBtn.CornerRadius = UDim.new(0, 4)
+        cornerBtn.Parent = btn
+        
+        btn.MouseButton1Click:Connect(callback)
+        return btn
+    end
+    
+    local function createTextBox(placeholder, yPos, callback)
+        local box = Instance.new("TextBox")
+        box.Size = UDim2.new(0.9, 0, 0, 30)
+        box.Position = UDim2.new(0.05, 0, 0, yPos)
+        box.BackgroundColor3 = themes[currentTheme].button
+        box.Text = placeholder
+        box.TextColor3 = themes[currentTheme].text
+        box.Font = Enum.Font.SourceSans
+        box.TextSize = 14
+        box.BorderSizePixel = 0
+        box.Parent = menu
+        
+        local cornerBox = Instance.new("UICorner")
+        cornerBox.CornerRadius = UDim.new(0, 4)
+        cornerBox.Parent = box
+        
+        box.FocusLost:Connect(function()
+            callback(box)
+        end)
+        return box
+    end
+    
+    -- ===== ПЕРЕМЕННЫЕ =====
+    local invisibleEnabled = false
+    local espEnabled = false
+    local espLines = {}
+    local murderer = nil
+    
+    -- ===== INVISIBLE =====
+    local invisBtn = createButton("👻 Invisible: OFF", 40, function()
+        invisibleEnabled = not invisibleEnabled
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = invisibleEnabled and 1 or 0
+            end
+        end
+        invisBtn.Text = invisibleEnabled and "👻 Invisible: ON" or "👻 Invisible: OFF"
+    end)
+    
+    -- ===== WALKSPEED =====
+    local wsBox = createTextBox("WalkSpeed: 16", 80, function(box)
+        local speed = tonumber(box.Text)
+        if speed and speed > 0 and speed <= 100 then
+            hum.WalkSpeed = speed
+            box.Text = "WalkSpeed: " .. speed
+        else
+            box.Text = "WalkSpeed: " .. hum.WalkSpeed
+        end
+    end)
+    
+    -- ===== ESP (X-Ray) =====
+    local espBtn = createButton("👁️ ESP: OFF", 120, function()
+        espEnabled = not espEnabled
+        if espEnabled then
+            updateESP()
+            espBtn.Text = "👁️ ESP: ON"
+        else
+            clearESP()
+            espBtn.Text = "👁️ ESP: OFF"
+        end
+    end)
+    
+    local function updateESP()
+        clearESP()
+        murderer = nil
+        for _, plr in pairs(game.Players:GetPlayers()) do
+            if plr ~= player then
+                local plrChar = plr.Character
+                if plrChar then
+                    local color = Color3.fromRGB(0, 255, 0) -- мирный
+                    if plrChar:FindFirstChild("Knife") or plrChar:FindFirstChild("Murderer") then
+                        color = Color3.fromRGB(255, 0, 0) -- убийца
+                        murderer = plr
+                    end
+                    if plrChar:FindFirstChild("Gun") or plrChar:FindFirstChild("Sheriff") then
+                        color = Color3.fromRGB(0, 0, 255) -- шериф
+                    end
+                    
+                    local esp = Instance.new("BoxHandleAdornment")
+                    esp.Size = Vector3.new(4, 5, 2)
+                    esp.Color3 = color
+                    esp.Transparency = 0.3
+                    esp.AlwaysOnTop = true
+                    esp.ZIndex = 10
+                    esp.Adornee = plrChar:FindFirstChild("HumanoidRootPart")
+                    esp.Parent = screenGui
+                    table.insert(espLines, esp)
+                end
+            end
+        end
+    end
+    
+    local function clearESP()
+        for _, esp in pairs(espLines) do
+            esp:Destroy()
+        end
+        espLines = {}
+    end
+    
+    -- ===== ТЕМЫ =====
+    local themeBtn = createButton("🎨 Сменить тему", 160, function()
+        local themesList = {"gray", "black", "blue"}
+        local currentIndex = table.find(themesList, currentTheme)
+        local nextIndex = currentIndex % #themesList + 1
+        applyTheme(themesList[nextIndex])
+    end)
+    
+    local function applyTheme(themeName)
+        currentTheme = themeName
+        local theme = themes[themeName]
+        menu.BackgroundColor3 = theme.bg
+        titleBar.BackgroundColor3 = theme.frame
+        titleText.TextColor3 = theme.text
+        
+        for _, child in pairs(menu:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.TextColor3 = theme.text
+            elseif child:IsA("TextBox") then
+                child.TextColor3 = theme.text
+                child.BackgroundColor3 = theme.button
+            end
+        end
+    end
+    
+    -- ===== УПРАВЛЕНИЕ =====
+    toggleBtn.MouseButton1Click:Connect(function()
+        menu.Visible = not menu.Visible
+    end)
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        menu.Visible = false
+    end)
+    
+    player.CharacterAdded:Connect(function(newChar)
+        char = newChar
+        hum = char:WaitForChild("Humanoid")
+        rootPart = char:WaitForChild("HumanoidRootPart")
+    end)
+    
+    print("🔺 MM2 PRO v1.0 загружен")
+end)()
