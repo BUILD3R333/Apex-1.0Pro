@@ -1,0 +1,209 @@
+-- ===== НАСТРОЙКИ =====
+local XRAY_COLOR = Color3.fromRGB(255, 0, 0)  -- КРАСНЫЙ
+local XRAY_TRANSPARENCY = 0.3
+local AIMBOT_SMOOTH = 0.15
+
+-- ===== ОСНОВНОЙ КОД =====
+local plr = game.Players.LocalPlayer
+local cam = workspace.CurrentCamera
+local mouse = plr:GetMouse()
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "AimXRay"
+gui.Parent = plr:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- ===== ПЛАВАЮЩАЯ КНОПКА (КРАСНЫЙ КРУГ) =====
+local dragBtn = Instance.new("ImageButton")
+dragBtn.Size = UDim2.new(0, 50, 0, 50)
+dragBtn.Position = UDim2.new(0.02, 0, 0.5, -25)
+dragBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+dragBtn.BackgroundTransparency = 0.2
+dragBtn.Image = "rbxassetid://5816666308" -- круг
+dragBtn.ImageColor3 = Color3.fromRGB(255, 0, 0)
+dragBtn.ScaleType = Enum.ScaleType.Fit
+dragBtn.Parent = gui
+
+-- Перетаскивание
+local dragging = false
+local dragStart, startPos
+
+dragBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = dragBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        dragBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- ===== ВЫПАДАЮЩЕЕ МЕНЮ (появляется при нажатии на круг) =====
+local menuOpen = false
+local menu = Instance.new("Frame")
+menu.Size = UDim2.new(0, 150, 0, 80)
+menu.Position = UDim2.new(0, 60, 0, -15)
+menu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+menu.BackgroundTransparency = 0.3
+menu.BorderSizePixel = 0
+menu.Visible = false
+menu.Parent = dragBtn
+
+-- Заголовок меню
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 20)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.Text = "🔴 X-RAY MENU"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = menu
+
+-- Функция создания кнопки в меню
+local function createMenuButton(text, y, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 22)
+    btn.Position = UDim2.new(0.05, 0, 0, y)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Text = text .. " OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = menu
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(50, 50, 50)
+        btn.Text = text .. (state and " ON" or " OFF")
+        callback(state)
+    end)
+    return btn
+end
+
+-- Открытие/закрытие меню по клику на красный круг
+dragBtn.MouseButton1Click:Connect(function()
+    menuOpen = not menuOpen
+    menu.Visible = menuOpen
+end)
+
+-- ===== X-RAY =====
+local xrayHighlights = {}
+local xrayActive = false
+
+local function isWanted(player)
+    local char = player.Character
+    if not char then return false end
+    local markers = {"Wanted", "Criminal", "Bounty", "Arrested", "Suspect"}
+    for _, name in ipairs(markers) do
+        if player:FindFirstChild(name) or char:FindFirstChild(name) then
+            return true
+        end
+    end
+    return false
+end
+
+local function updateXRay()
+    if not xrayActive then
+        for _, hl in pairs(xrayHighlights) do
+            if hl and hl.Parent then hl:Destroy() end
+        end
+        xrayHighlights = {}
+        return
+    end
+    
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= plr and isWanted(p) then
+            local char = p.Character
+            if char then
+                local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+                if torso and not xrayHighlights[p] then
+                    local hl = Instance.new("Highlight")
+                    hl.Adornee = torso
+                    hl.FillColor = XRAY_COLOR  -- КРАСНЫЙ
+                    hl.FillTransparency = XRAY_TRANSPARENCY
+                    hl.OutlineTransparency = 1
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    hl.Enabled = true
+                    hl.Parent = torso
+                    xrayHighlights[p] = hl
+                end
+            end
+        end
+    end
+    
+    for p, hl in pairs(xrayHighlights) do
+        if not p.Parent or not isWanted(p) then
+            hl:Destroy()
+            xrayHighlights[p] = nil
+        end
+    end
+end
+
+-- Кнопка X-Ray в меню
+createMenuButton("X-Ray", 22, function(state)
+    xrayActive = state
+    updateXRay()
+end)
+
+-- Обновление при появлении игроков
+game.Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        updateXRay()
+    end)
+end)
+game.Players.PlayerRemoving:Connect(function(p)
+    if xrayHighlights[p] then
+        xrayHighlights[p]:Destroy()
+        xrayHighlights[p] = nil
+    end
+end)
+
+-- ===== AIMBOT =====
+local aimbotActive = false
+
+local function getClosestWanted()
+    local closest, dist = nil, math.huge
+    local origin = cam.CFrame.Position
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= plr and isWanted(p) and p.Character then
+            local torso = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("Torso")
+            if torso then
+                local d = (torso.Position - origin).Magnitude
+                if d < dist then
+                    dist = d
+                    closest = torso
+                end
+            end
+        end
+    end
+    return closest
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if aimbotActive then
+        local target = getClosestWanted()
+        if target then
+            local newCF = CFrame.new(cam.CFrame.Position, target.Position)
+            cam.CFrame = cam.CFrame:Lerp(newCF, AIMBOT_SMOOTH)
+        end
+    end
+end)
+
+-- Кнопка Aimbot в меню
+createMenuButton("Aimbot", 47, function(state)
+    aimbotActive = state
+end)
+
+print("✅ X-Ray + Aimbot загружены! Красный круг = меню.")
