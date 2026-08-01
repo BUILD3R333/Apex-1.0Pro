@@ -1,0 +1,159 @@
+-- ===== НАСТРОЙКИ (можно менять) =====
+local XRAY_COLOR = Color3.fromRGB(0, 255, 0)   -- зелёный
+local XRAY_TRANSPARENCY = 0.3                  -- полупрозрачный
+local AIMBOT_SMOOTH = 0.15                     -- плавность (0-1), 1 = мгновенно
+
+-- ===== ОСНОВНОЙ КОД =====
+local plr = game.Players.LocalPlayer
+local cam = workspace.CurrentCamera
+local mouse = plr:GetMouse()
+
+-- Создаём маленькое меню (две кнопки)
+local gui = Instance.new("ScreenGui")
+gui.Name = "AimXRay"
+gui.Parent = plr:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 120, 0, 60)
+frame.Position = UDim2.new(0.01, 0, 0.5, -30)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.2
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+local function createButton(text, y, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 25)
+    btn.Position = UDim2.new(0.05, 0, 0, y)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = frame
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(60, 60, 60)
+        btn.Text = text .. (state and " ON" or " OFF")
+        callback(state)
+    end)
+    return btn
+end
+
+-- Переменные для X-Ray
+local xrayHighlights = {} -- { [player] = highlight }
+
+local function isWanted(player)
+    -- Проверяем наличие объектов с именами-маркерами розыска
+    local char = player.Character
+    if not char then return false end
+    -- Ищем в игроке или персонаже
+    local markers = {"Wanted", "Criminal", "Bounty", "Arrested", "Suspect"}
+    for _, name in ipairs(markers) do
+        if player:FindFirstChild(name) or char:FindFirstChild(name) then
+            return true
+        end
+    end
+    -- Можно добавить проверку на атрибуты
+    return false
+end
+
+local function updateXRay(state)
+    if not state then
+        -- Удаляем все подсветки
+        for _, hl in pairs(xrayHighlights) do
+            if hl and hl.Parent then hl:Destroy() end
+        end
+        xrayHighlights = {}
+        return
+    end
+    -- Обходим всех игроков
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= plr and isWanted(p) then
+            local char = p.Character
+            if char then
+                local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+                if torso and not xrayHighlights[p] then
+                    local hl = Instance.new("Highlight")
+                    hl.Adornee = torso   -- подсвечиваем только торс
+                    hl.FillColor = XRAY_COLOR
+                    hl.FillTransparency = XRAY_TRANSPARENCY
+                    hl.OutlineTransparency = 1 -- без обводки
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    hl.Enabled = true
+                    hl.Parent = torso
+                    xrayHighlights[p] = hl
+                end
+            end
+        end
+    end
+    -- Удаляем подсветки для игроков, которые перестали быть преступниками или ушли
+    for p, hl in pairs(xrayHighlights) do
+        if not p.Parent or not isWanted(p) then
+            hl:Destroy()
+            xrayHighlights[p] = nil
+        end
+    end
+end
+
+-- Следим за появлением новых игроков и обновлением персонажей
+game.Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        updateXRay(btnXRayState) -- обновить при появлении персонажа
+    end)
+end)
+game.Players.PlayerRemoving:Connect(function(p)
+    if xrayHighlights[p] then
+        xrayHighlights[p]:Destroy()
+        xrayHighlights[p] = nil
+    end
+end)
+
+-- Кнопка X-Ray
+local btnXRayState = false
+createButton("X-Ray", 5, function(state)
+    btnXRayState = state
+    updateXRay(state)
+end)
+
+-- ===== AIMBOT =====
+local aimbotActive = false
+local function getClosestWanted()
+    local closest, dist = nil, math.huge
+    local origin = cam.CFrame.Position
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= plr and isWanted(p) and p.Character then
+            local torso = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("Torso")
+            if torso then
+                local d = (torso.Position - origin).Magnitude
+                if d < dist then
+                    dist = d
+                    closest = torso
+                end
+            end
+        end
+    end
+    return closest
+end
+
+local function aimbotLoop()
+    if not aimbotActive then return end
+    local target = getClosestWanted()
+    if target then
+        local targetPos = target.Position
+        local newCF = CFrame.new(cam.CFrame.Position, targetPos)
+        cam.CFrame = cam.CFrame:Lerp(newCF, AIMBOT_SMOOTH) -- плавное наведение
+    end
+end
+
+-- Запускаем цикл аимбота
+game:GetService("RunService").RenderStepped:Connect(aimbotLoop)
+
+-- Кнопка Aimbot
+createButton("Aimbot", 32, function(state)
+    aimbotActive = state
+end)
+
+print("X-Ray + Aimbot загружены! Джек, удачи.")
